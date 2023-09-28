@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8.0.33
+    expose:
+      - "3306"
+    volumes:
+      - ./mysql/db:/docker-entrypoint-initdb.d
+    env_file:
+      - ./.db.env
+  app:
+    depends_on:
+      - mysql
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - 8000:80
+    env_file:
+      - ./.app.env
+    entrypoint:
+      - /start.sh

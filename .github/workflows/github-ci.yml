@@ -1,0 +1,343 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PYTHON_VERSION: "3.10.4"
+  POETRY_VERSION: "1.4.2"
+  POETRY_URL: https://install.python-poetry.org
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  DOCKER_IMAGE_NAME: my-apps
+  DOCKER_IMAGE_TAG: latest
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: poetry install
+
+  tests:
+    needs: ['prepare']
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run tests
+        run: poetry run pytest tests/ -v
+
+  isort-lint:
+    needs: ['prepare']
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Run isort lint
+        run: poetry run task isort-lint
+
+  black-lint:
+    needs: [ 'prepare' ]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run black lint
+        run: poetry run task black-lint
+
+  pip-check:
+    needs: [ 'prepare' ]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run pip check
+        run: poetry run task pip-check
+
+  poetry-check:
+    needs: ['prepare']
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run poetry check
+        run: poetry run task poetry-check
+
+  mypy-check:
+    needs: ['prepare']
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0.33
+        env:
+          MYSQL_USER: user
+          MYSQL_ROOT_PASSWORD: P4ssW0rd
+          MYSQL_PASSWORD: P4ssW0rd
+          MYSQL_DATABASE: test
+        ports:
+          - 5432:5432
+    env:
+      DB_URI: mysql+aiomysql://user:P4ssW0rd@mysql:3306/test
+      SECRET_KEY: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+        id: setup_python
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-cache-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ env.POETRY_VERSION }}
+
+      - name: Cache Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-local-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ hashFiles('.github/workflows/*.yml') }}
+
+      - name: Install Poetry ${{ env.POETRY_VERSION }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y git gcc g++ build-essential
+          curl -sSL ${{ env.POETRY_URL }} | python - --version ${{ env.POETRY_VERSION }}
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run mypy lint
+        run: poetry run task mypy-lint
